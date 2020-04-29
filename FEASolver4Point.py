@@ -25,7 +25,7 @@ Engineers, ISBN 0-486-67620-X.
 
 low_boundary = 0 # The lower boundary of the graph
 high_boundary = 1 # The upper boundary of the graph
-grid_points = 7 # The number of nodes that exist along the axes of the boundary (inclusive)
+grid_points = 10 # The number of nodes that exist along the axes of the boundary (inclusive)
 
 #1. Discretize the system.
 number_of_divisions = (high_boundary - low_boundary) * grid_points #each quadrant will have the same number of nodes in it
@@ -89,9 +89,9 @@ for xcounter in range(number_of_divisions):
             z_0 = z_matrix[ycounter][xcounter]
 
 
-            phi_subs_0 = sym.N(phi_diff_0.subs(x0,x_min).subs(x1,x_max).subs(y0,y_min).subs(y1,y_max).subs(phi0,z_0).subs(phix,z_x).subs(phiy,z_y),2)
-            phi_subs_x = sym.N(phi_diff_x.subs(x0,x_min).subs(x1,x_max).subs(y0,y_min).subs(y1,y_max).subs(phi0,z_0).subs(phix,z_x).subs(phiy,z_y),2)
-            phi_subs_y = sym.N(phi_diff_y.subs(x0,x_min).subs(x1,x_max).subs(y0,y_min).subs(y1,y_max).subs(phi0,z_0).subs(phix,z_x).subs(phiy,z_y),2)
+            phi_subs_0 = phi_diff_0.subs(x0,x_min).subs(x1,x_max).subs(y0,y_min).subs(y1,y_max).subs(phi0,z_0).subs(phix,z_x).subs(phiy,z_y)
+            phi_subs_x = phi_diff_x.subs(x0,x_min).subs(x1,x_max).subs(y0,y_min).subs(y1,y_max).subs(phi0,z_0).subs(phix,z_x).subs(phiy,z_y)
+            phi_subs_y = phi_diff_y.subs(x0,x_min).subs(x1,x_max).subs(y0,y_min).subs(y1,y_max).subs(phi0,z_0).subs(phix,z_x).subs(phiy,z_y)
 
             solution_list.append(phi_subs_0)
             solution_list.append(phi_subs_x)
