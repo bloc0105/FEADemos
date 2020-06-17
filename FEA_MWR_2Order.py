@@ -109,20 +109,31 @@ result = sym.nonlinsolve([eq1,eq2,eq3,eq4,eq5],[ax,ay,bx,by,c])
 # print(sym.latex(result))
 phi_final = result.args[0][0] * x**2 + result.args[0][1] * y**2 + result.args[0][2] * x  + result.args[0][3] * y + result.args[0][4]  
 
+phi_solve_vars = [phi0,phix,phixx,phiy,phiyy]
+
+phi_poly = sym.Poly(phi_final,phi_solve_vars)
+
+
+
+interpolation_functions = [phi_poly.as_expr().coeff(val) for val in phi_solve_vars]
+
+print(sym.latex(sym.Matrix(interpolation_functions)))
+
 # print(sym.latex(phi_final))
 f = -1  # This is the equation being solved
 
 phi_solved = sym.diff(phi_final,x,x) + sym.diff(phi_final,y,y)
 residual = phi_solved - f
-# print(sym.latex(phi_solved))
+# print(sym.latex(sym.Matrix(phi_solved)))
 
+print("WHaaaa!")
+weighted_average = sym.integrate(sym.integrate(residual * interpolation_functions[0],(x,x0,x2)),(y,y0,y2))
+weighted_average_x2 = sym.integrate(sym.integrate(residual * interpolation_functions[1],(x,x0,x2)),(y,y0,y2))
+weighted_average_x4 = sym.integrate(sym.integrate(residual * interpolation_functions[2],(x,x0,x2)),(y,y0,y2))
+weighted_average_y2 = sym.integrate(sym.integrate(residual * interpolation_functions[3],(x,x0,x2)),(y,y0,y2))
+weighted_average_y4 = sym.integrate(sym.integrate(residual * interpolation_functions[4],(x,x0,x2)),(y,y0,y2))
 
-weighted_average = sym.integrate(sym.integrate(residual * trial_function,(x,x0,x2)),(y,y0,y2))
-weighted_average_x2 = sym.integrate(sym.integrate(residual * trial_function * x**2,(x,x0,x2)),(y,y0,y2))
-weighted_average_x4 = sym.integrate(sym.integrate(residual * trial_function * x**4,(x,x0,x2)),(y,y0,y2))
-weighted_average_y2 = sym.integrate(sym.integrate(residual * trial_function * y**2,(x,x0,x2)),(y,y0,y2))
-weighted_average_y4 = sym.integrate(sym.integrate(residual * trial_function * y**4,(x,x0,x2)),(y,y0,y2))
-
+print("Ohai!!")
 # print(sym.latex(weighted_average))
 
 #3. Compute the Element Matrices. 
@@ -134,6 +145,7 @@ solution_equations = []
 #Each set of three points forms a right triangle. The triangles are solved and made into a matrix. 
 for xcounter in range(number_of_divisions):
     for ycounter in range(number_of_divisions):
+        print("Iteration " + str(xcounter) + " " + str(ycounter) + " of " + str(element_range) + " " + str(element_range))
 
             
         phi0_element = 0
@@ -198,7 +210,7 @@ for xcounter in range(number_of_divisions):
             solution_list.append(weighted_average_y2_subs)
             solution_list.append(weighted_average_y4_subs)
             
-            var_list.append([phi0_element,phix_element,phiy_element,phiyy_element,phixx_element])
+            var_list.append([phi0_element,phix_element,phixx_element,phiy_element,phiyy_element])
             solution_equations.append(solution_list)
 
          
@@ -257,7 +269,7 @@ for xcounter in range(number_of_divisions):
             solution_list.append(weighted_average_y2_subs)
             solution_list.append(weighted_average_y4_subs)
             
-            var_list.append([phi0_element,phix_element,phiy_element,phiyy_element,phixx_element])
+            var_list.append([phi0_element,phix_element,phixx_element,phiy_element,phiyy_element])
             solution_equations.append(solution_list)
 
 
@@ -283,7 +295,7 @@ for solution_counter in range(len(solution_equations)):
 solution_matrix =  sym.linear_eq_to_matrix(equation_system,z_vars)
 
 eq_matrix = solution_matrix[0]
-print(sym.latex(eq_matrix))
+# print(sym.latex(eq_matrix))
 # print(sym.latex(solution_matrix))
 result_matrix = solution_matrix[1]
 
@@ -305,6 +317,7 @@ for each_var in z_vars:
 #This applies the boundary conditions to the system and converts it back into a system of equations.        
 boundary_equations = eq_matrix * sym.Matrix(z_vars_boundary)
 
+# print(sym.latex(sym.Matrix(boundary_equations)))
 #Conditions where the equation already solves to zero are a problem, because 0 = 0 will not evaluate
 #This replaces the boundary condition and sets a specific variable to 0 so it can be solved. 
 boundary_eq_with_result = []
@@ -313,11 +326,12 @@ for counter in range(len(boundary_equations)):
          
         boundary_eq_with_result.append(sym.Eq(boundary_equations[counter],result_matrix[counter]))
     else:
+        print(z_vars[counter])
         boundary_eq_with_result.append(sym.Eq(z_vars[counter],0))
 
 #6. Solve the System. Sympy linsolve makes short work of that.   
 resultset = sym.linsolve(boundary_eq_with_result,z_vars)
-print(resultset)
+# print(resultset)
 
 #7 Use the computed results to determine desired results. 
 #In most FEA solutions, this would be stresses or fluid flow, but in this case, it's just the Z-Values.
