@@ -130,7 +130,7 @@ for xcounter in range(number_of_divisions):
  
             solution_matrices.append(sym.linear_eq_to_matrix(solution_list,[z_0,z_x,z_y]))
             solution_equations.append(solution_list)
-
+            
 
 #4.  Assemble the element equations into a global matrix. 
 #This sets of a global system of equations and the list of unknown variables to be solved
@@ -142,7 +142,7 @@ for solution_counter in range(len(solution_equations)):
     for eq_counter in range(len(solution_equations[solution_counter])):
 
         equation_system[z_vars.index(var_list[solution_counter][eq_counter])] += solution_equations[solution_counter][eq_counter]
-# print(sym.latex(sym.Matrix(equation_system)))
+print(sym.latex(sym.Matrix(equation_system)))
 #Make the equations into a matrix to make them easier to solve. 
 #5. Impose Boundary conditions. Zero at x = 1 and y = 1. This replaces all of the nodes in those positions with zeros.
 replacement_eq = []
@@ -166,7 +166,7 @@ for z_index,variable in enumerate(z_vars):
     else:
         boundary_eq_with_result.append(sym.Eq(variable,0))
 
-print(sym.latex(sym.Matrix(boundary_eq_with_result)))
+# print(sym.latex(sym.Matrix(boundary_eq_with_result)))
 
 #6. Solve the System. Sympy linsolve makes short work of that.   
 resultset = sym.linsolve(boundary_eq_with_result,z_vars)

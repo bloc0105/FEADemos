@@ -1,7 +1,9 @@
 import numpy as num
 from matplotlib import pyplot as plott
 import sympy as sym
-
+from sympy.vector import CoordSys3D as coord3
+from sympy.vector import Del 
+from sympy.vector import Vector
 
 '''
 Solves the equation \nabla u=f(x,y) using the Finite Element method. 
@@ -25,8 +27,13 @@ Engineers, ISBN 0-486-67620-X.
 
 low_boundary = 0 # The lower boundary of the graph
 high_boundary = 1 # The upper boundary of the graph
-grid_points = 3 # The number of nodes that exist along the axes of the boundary (inclusive)
+grid_points = 10 # The number of nodes that exist along the axes of the boundary (inclusive)
 
+R = coord3('R')
+delop = Del()
+
+x = R.x
+y = R.y
 #1. Discretize the system.
 number_of_divisions = (high_boundary - low_boundary) * grid_points #each quadrant will have the same number of nodes in it
 
@@ -42,8 +49,7 @@ XGrid,YGrid = num.meshgrid(x_range, y_range) #Discretize the space into rectangu
 z_matrix = [[sym.symbols('z_x' + str(counterx) + '_y' + str(countery)) for counterx in range(len(XGrid))] for countery in range(len(XGrid[0]))]
 
 #Variables to be used in the calculation.  
-x, y, f= sym.symbols('x y f')
-x0,y0,y1,x1,phi0,phix,phiy = sym.symbols('x_0 y_0 y_1 x_1 phi_0 phi_x phi_y')
+x0,y0,y1,x1,phi0,phix,phiy= sym.symbols('x_0 y_0 y_1 x_1 phi_0 phi_x phi_y')
 
 #2. Set up The Element Parameters
 
@@ -62,24 +68,31 @@ phi_poly = sym.Poly(phi_final,phi_solve_vars)
 interpolation_functions = [phi_poly.as_expr().coeff(counter) for counter in  phi_solve_vars]
 
 
-# print(sym.latex(sym.Matrix(interpolation_functions)))
+print(sym.latex(sym.Matrix(interpolation_functions)))
 
 # print(sym.latex(phi_final))
 f = -1  # This is the equation being solved
 
-phi_diff = sym.diff(phi_final,x) + sym.diff(phi_final,y)
+phi_diff_2 = sym.diff(phi_final,x,x) + sym.diff(phi_final,y,y)
+phi_diff_1 = sym.diff(phi_final,x) + sym.diff(phi_final,y)
+v = sym.diff(phi_final,x) * R.i + sym.diff(phi_final,y) * R.j
+# print('----------------------------------------------------------------------------')
+# print(sym.latex(phi_diff_2))
+# print(sym.latex(phi_diff_1))
 
-residual = phi_diff - f
+residual = phi_diff_2 - f
+q = R.i + R.j
 # print(sym.latex(sym.Matrix(phi_solved)))
 
+weighted_averages = []
 
-weighted_averages = [ func.subs(x,x0).subs(y,y0) * phi_diff.subs(x,x0).subs(y,y0) - sym.integrate(sym.integrate(phi_diff * func,(x,x0,x1)),(y,y0,y1)) + sym.integrate(sym.integrate(f * func,(x,x0,x1)),(y,y0,y1)) for func in interpolation_functions]
 
-print(sym.latex(sym.Matrix(weighted_averages)))
-print('===================================')
-phi_diff_0 = weighted_averages[0] #Minimum at the point (x_0,y_0)
-phi_diff_x = weighted_averages[1] #Minimum at the point (x_1,y_0)
-phi_diff_y = weighted_averages[2] #Minimum at the point (x_0,y_1)
+
+# weighted_averages = [ func.subs(x,x0).subs(y,y0) * phi_diff_1.subs(x,x0).subs(y,y0) - sym.integrate(sym.integrate(phi_diff_1 * func,(x,x0,x1)),(y,y0,y1)) + sym.integrate(sym.integrate(f * func,(x,x0,x1)),(y,y0,y1)) for func in interpolation_functions]
+
+# print(sym.latex(sym.Matrix(weighted_averages)))
+# print('===================================')
+
 
 #3. Compute the Element Matrices. 
 var_list = []
@@ -90,10 +103,13 @@ zero_vals = []
 #Each set of three points forms a right triangle. The triangles are solved and made into a matrix. 
 for xcounter in range(number_of_divisions):
     for ycounter in range(number_of_divisions):
-
+        q =  Vector.zero
         #If not on an upper boundary, Create a trianlge going in the +x, +y direction
         if xcounter < element_range and ycounter < element_range:
             solution_list = []
+            
+            
+            
             x_max = XGrid[ycounter][xcounter + 1]
             x_min = XGrid[ycounter][xcounter]
 
@@ -103,23 +119,40 @@ for xcounter in range(number_of_divisions):
             z_y = z_matrix[ycounter + 1][xcounter]
             z_x = z_matrix[ycounter][xcounter + 1]
             z_0 = z_matrix[ycounter][xcounter]
+            
+            for function in interpolation_functions:
+#                 print('---------------------------------------------------------------------')
+#                 print(sym.latex(sym.integrate(sym.integrate( f * function,(x,x0,x1)),(x,y0,y1))))
+                w = function * (v.dot(q)) - sym.Integral(sym.Integral( v.dot(delop(function)),(x,x0,x1)),(y,y0,y1)) - sym.Integral(sym.Integral( f * function,(x,x0,x1)),(y,y0,y1))
+                weighted_averages.append(w)
+        
+            phi_diff_0 = weighted_averages[0] #Minimum at the point (x_0,y_0)
+            phi_diff_x = weighted_averages[1] #Minimum at the point (x_1,y_0)
+            phi_diff_y = weighted_averages[2] #Minimum at the point (x_0,y_1)
+    
 
 
             phi_subs_0 = phi_diff_0.subs(x0,x_min).subs(x1,x_max).subs(y0,y_min).subs(y1,y_max).subs(phi0,z_0).subs(phix,z_x).subs(phiy,z_y)
             phi_subs_x = phi_diff_x.subs(x0,x_min).subs(x1,x_max).subs(y0,y_min).subs(y1,y_max).subs(phi0,z_0).subs(phix,z_x).subs(phiy,z_y)
             phi_subs_y = phi_diff_y.subs(x0,x_min).subs(x1,x_max).subs(y0,y_min).subs(y1,y_max).subs(phi0,z_0).subs(phix,z_x).subs(phiy,z_y)
 
-            solution_list.append(phi_subs_0)
-            solution_list.append(phi_subs_x)
-            solution_list.append(phi_subs_y)
+            solution_list.append(phi_subs_0.doit())
+            solution_list.append(phi_subs_x.doit())
+            solution_list.append(phi_subs_y.doit())
             var_list.append([z_0,z_x,z_y])
 
             solution_matrices.append(sym.linear_eq_to_matrix(solution_list,[z_0,z_x,z_y]))
             solution_equations.append(solution_list)
+#             print(sym.latex(sym.Matrix(solution_list)))
 
         #This is used to establish boundary conditions
         else:
             zero_vals.append(z_matrix[ycounter][xcounter])
+            if xcounter >= element_range:
+                q += R.i 
+            
+            if ycounter >= element_range:
+                q += R.j  
          
         #If not on a lower boundary, make a right triangle in the -x -y direction. 
         if xcounter > 0 and ycounter > 0 : 
@@ -134,23 +167,36 @@ for xcounter in range(number_of_divisions):
             z_0 = z_matrix[ycounter][xcounter]
  
  
+            for function in interpolation_functions:
+                w = function * (v.dot(q)) - sym.Integral(sym.Integral( v.dot(delop(function)),(x,x0,x1)),(y,y0,y1)) - sym.Integral(sym.Integral( f * function,(x,x0,x1)),(y,y0,y1))
+                weighted_averages.append(w)
+        
+            phi_diff_0 = weighted_averages[0] #Minimum at the point (x_0,y_0)
+            phi_diff_x = weighted_averages[1] #Minimum at the point (x_1,y_0)
+            phi_diff_y = weighted_averages[2] #Minimum at the point (x_0,y_1)
+    
+
+
             phi_subs_0 = phi_diff_0.subs(x0,x_min).subs(x1,x_max).subs(y0,y_min).subs(y1,y_max).subs(phi0,z_0).subs(phix,z_x).subs(phiy,z_y)
             phi_subs_x = phi_diff_x.subs(x0,x_min).subs(x1,x_max).subs(y0,y_min).subs(y1,y_max).subs(phi0,z_0).subs(phix,z_x).subs(phiy,z_y)
             phi_subs_y = phi_diff_y.subs(x0,x_min).subs(x1,x_max).subs(y0,y_min).subs(y1,y_max).subs(phi0,z_0).subs(phix,z_x).subs(phiy,z_y)
- 
-            solution_list.append(phi_subs_0)
-            solution_list.append(phi_subs_x)
-            solution_list.append(phi_subs_y)
+
+            solution_list.append(phi_subs_0.doit())
+            solution_list.append(phi_subs_x.doit())
+            solution_list.append(phi_subs_y.doit())
             var_list.append([z_0,z_x,z_y])
- 
+
             solution_matrices.append(sym.linear_eq_to_matrix(solution_list,[z_0,z_x,z_y]))
             solution_equations.append(solution_list)
+#             print(sym.latex(sym.Matrix(solution_list)))
 
 
 #4.  Assemble the element equations into a global matrix. 
 #This sets of a global system of equations and the list of unknown variables to be solved
 z_vars = [z_matrix[countery][counterx] for countery  in range(len(z_matrix)) for counterx in range(len(z_matrix[0]))]
 equation_system = [0 for countery  in range(len(z_matrix)) for counterx in range(len(z_matrix[0]))]
+
+print('-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=')
 
 #This loop assembles each of the individual element equations into the global list of equations.
 for solution_counter in range(len(solution_equations)):
