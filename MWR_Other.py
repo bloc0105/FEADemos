@@ -65,13 +65,13 @@ YGrid_expanded = num.concatenate((YGrid,Y_Grid_shift_1,Y_Grid_shift_2),0)
 value_pairs = [[XGrid_expanded[rowcounter][columncounter],YGrid_expanded[rowcounter][columncounter]] for rowcounter in range(len(XGrid_expanded)) for columncounter in range(len(XGrid_expanded[0]))]
 pairs_x = [XGrid_expanded[rowcounter][columncounter] for rowcounter in range(len(XGrid_expanded)) for columncounter in range(len(XGrid_expanded[0]))]
 pairs_y = [YGrid_expanded[rowcounter][columncounter] for rowcounter in range(len(XGrid_expanded)) for columncounter in range(len(XGrid_expanded[0]))]
-  
+#  
 # plott.scatter(pairs_x,pairs_y)
-#   
+#  
 # for pair_index, pair in enumerate(value_pairs):
 #     plott.text(pair[0] + .02, pair[1], str(pair_index))
-#   
-#   
+#  
+#  
 # plott.show()
 
     
@@ -87,7 +87,8 @@ x0,y0,y1,x1,phi0,phix,phiy = sym.symbols('x_0 y_0 y_1 x_1 phi_0 phi_x phi_y')
 phixx,phiyy = sym.symbols('phi_xx phi_yy')
 x2,y2 = sym.symbols('x2 y2')
 
-original_function = (1 - x**2) * (1 - y**2) 
+trial_function = (1 - x**2) * (1 - y**2) 
+
 
 #2. Set up The Element Parameters
 
@@ -99,26 +100,20 @@ eq3 = sym.Eq(phixx, ax * x2**2 + bx * x2 + ay * y0**2 + by * y0 + c)
 eq4 = sym.Eq(phiy, ax * x0**2 + bx * x0 + ay * y1**2 + by * y1 + c)
 eq5 = sym.Eq(phiyy, ax * x0**2 + bx * x0 + ay * y2**2 + by * y2 + c)
 result = sym.nonlinsolve([eq1,eq2,eq3,eq4,eq5],[ax,ay,bx,by,c])
-non_solve_matrix = sym.linear_eq_to_matrix([eq1,eq2,eq3,eq4,eq5],[ax,ay,bx,by,c])
-# print(sym.latex(non_solve_matrix))
-g_inv = non_solve_matrix[0].inv()
 
 # print(sym.latex(result))
-interp_poly_vars = [x**2,y**2,x,y,1]
+phi_final = result.args[0][0] * x**2 + result.args[0][1] * y**2 + result.args[0][2] * x  + result.args[0][3] * y + result.args[0][4]  
 
-# print(sym.latex(interp_poly_vars))
-# print(sym.latex(interpolation_matrix))
-phi_final = sum([result.args[0][counter] * interp_poly_vars[counter] for counter in range(len(interp_poly_vars))])
-# print(sym.latex(phi_final))
 phi_solve_vars = [phi0,phix,phixx,phiy,phiyy]
 
 phi_poly = sym.Poly(phi_final,phi_solve_vars)
-print(sym.latex(phi_poly.as_expr()))
 
-interpolation_functions = [phi_poly.as_expr().coeff(counter) for counter in  phi_solve_vars]
+# print(sym.latex(phi_poly.as_expr()))
+
+interpolation_functions = [phi_poly.as_expr().coeff(val) for val in  phi_solve_vars]
 
 
-print(sym.latex(sym.Matrix(interpolation_functions)))
+# print(sym.latex(sym.Matrix(interpolation_functions)))
 
 # print(sym.latex(phi_final))
 f = -1  # This is the equation being solved
@@ -127,12 +122,10 @@ phi_solved = sym.diff(phi_final,x,x) + sym.diff(phi_final,y,y)
 residual = phi_solved - f
 # print(sym.latex(sym.Matrix(phi_solved)))
 
-weighted_averages = [sym.Integral(sym.Integral(residual * func,(x,x0,x2)),(y,y0,y2))  for func in interpolation_functions]
+weighted_averages = [sym.integrate(sym.integrate(residual * func,(x,x0,x2)),(y,y0,y2)) for func in interpolation_functions]
 
-# print(sym.latex(sym.Matrix(weighted_averages)))
 #3. Compute the Element Matrices. 
 var_list = []
-sols = []
 solution_equations = []
 
 #Each set of three points forms a right triangle. The triangles are solved and made into a matrix. 
@@ -140,6 +133,7 @@ for xcounter in range(number_of_divisions):
     for ycounter in range(number_of_divisions):
         print("Iteration " + str(xcounter) + " " + str(ycounter) + " of " + str(element_range) + " " + str(element_range))
 
+            
         phi0_element = 0
         phix_element = 0
         phixx_element = 0
@@ -177,10 +171,7 @@ for xcounter in range(number_of_divisions):
                 average_subs = average_subs.subs(x1, num.average([x_min,x_max])).subs(y1, num.average([y_min,y_max]))
                 average_subs = average_subs.subs(phi0,phi0_element).subs(phix,phix_element).subs(phiy, phiy_element)
                 average_subs = average_subs.subs(phixx,phixx_element).subs(phiyy,phiyy_element)
-                
-                solution_list.append(average_subs.doit())
-                sols.append(average_subs.doit())
-                
+                solution_list.append(average_subs)
             
             var_list.append([phi0_element,phix_element,phixx_element,phiy_element,phiyy_element])
             solution_equations.append(solution_list)
@@ -208,16 +199,15 @@ for xcounter in range(number_of_divisions):
                 elif pair[0] < x_min and pair[0] > x_max and pair[1] == y_min:
                     phix_element = z_matrix[pair_index]
 
-            for average in weighted_averages:
+            for  average in weighted_averages:
            
                 average_subs = average.subs(x0,x_min).subs(x2,x_max).subs(y0,y_min).subs(y2,y_max)
                 average_subs = average_subs.subs(x1, num.average([x_min,x_max])).subs(y1, num.average([y_min,y_max]))
                 average_subs = average_subs.subs(phi0,phi0_element).subs(phix,phix_element).subs(phiy, phiy_element)
                 average_subs = average_subs.subs(phixx,phixx_element).subs(phiyy,phiyy_element)
 
-                sols.append(average_subs.doit())
-                
-                solution_list.append(average_subs.doit())
+       
+                solution_list.append(average_subs)
             
             var_list.append([phi0_element,phix_element,phixx_element,phiy_element,phiyy_element])
             solution_equations.append(solution_list)
@@ -227,11 +217,10 @@ for xcounter in range(number_of_divisions):
 #This sets of a global system of equations and the list of unknown variables to be solved
 z_vars = z_matrix
 # print(sym.latex(sym.Matrix(solution_equations)))
-# print(sym.latex(sym.Matrix(sols)))
 # print(sym.latex(sym.Matrix(z_vars)))
 # print(sym.latex(sym.Matrix(var_list)))
 # print("============================================================================================")
-equation_system = [0 for counter in z_vars]
+equation_system = [0 for counter  in z_matrix]
 
 #This loop assembles each of the individual element equations into the global list of equations.
 for solution_counter in range(len(solution_equations)):
@@ -239,7 +228,7 @@ for solution_counter in range(len(solution_equations)):
 
         equation_system[z_vars.index(var_list[solution_counter][eq_counter])] += solution_equations[solution_counter][eq_counter]
 
-print(sym.latex(sym.Matrix(equation_system)))
+# print(sym.latex(sym.Matrix(equation_system)))
 
 #5. Impose Boundary conditions. Zero at x = 1 and y = 1. This replaces all of the nodes in those positions with zeros.
 zero_vals = []
@@ -274,7 +263,7 @@ for z_index,variable in enumerate(z_vars):
 
 # print(sym.latex(sym.Matrix(boundary_eq_with_result)))
 a = sym.linear_eq_to_matrix(boundary_eq_with_result,z_vars)
-# print(sym.latex(a))
+print(sym.latex(a))
 #6. Solve the System. Sympy linsolve makes short work of that.   
 resultset = sym.linsolve(boundary_eq_with_result,z_vars)
 # print(sym.latex(sym.Matrix(boundary_eq_with_result)))

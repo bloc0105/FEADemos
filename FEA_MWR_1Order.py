@@ -54,16 +54,32 @@ b = phi0 - m * x0 - n * y0
 
 phi_final = m * x + n * y + b #Equation for the plane
 
+phi_solve_vars = [phi0,phix,phiy]
+
+phi_poly = sym.Poly(phi_final,phi_solve_vars)
+# print(sym.latex(phi_poly.as_expr()))
+
+interpolation_functions = [phi_poly.as_expr().coeff(counter) for counter in  phi_solve_vars]
+
+
+# print(sym.latex(sym.Matrix(interpolation_functions)))
+
+# print(sym.latex(phi_final))
 f = -1  # This is the equation being solved
 
-#Solve for the functional of the system. 
-phi = (sym.diff(phi_final,x))**2  +  (sym.diff(phi_final,y))**2 + 2 * f * phi_final
-phi_integral = sym.integrate(sym.integrate(phi,(x,x0,x1)),(y,y0,y1))
+phi_diff = sym.diff(phi_final,x) + sym.diff(phi_final,y)
 
-#Minimize the functional
-phi_diff_0 = sym.diff(phi_integral, phi0) #Minimum at the point (x_0,y_0)
-phi_diff_x = sym.diff(phi_integral, phix) #Minimum at the point (x_1,y_0)
-phi_diff_y = sym.diff(phi_integral, phiy) #Minimum at the point (x_0,y_1)
+residual = phi_diff - f
+# print(sym.latex(sym.Matrix(phi_solved)))
+
+
+weighted_averages = [ func.subs(x,x0).subs(y,y0) * phi_diff.subs(x,x0).subs(y,y0) - sym.integrate(sym.integrate(phi_diff * func,(x,x0,x1)),(y,y0,y1)) + sym.integrate(sym.integrate(f * func,(x,x0,x1)),(y,y0,y1)) for func in interpolation_functions]
+
+print(sym.latex(sym.Matrix(weighted_averages)))
+print('===================================')
+phi_diff_0 = weighted_averages[0] #Minimum at the point (x_0,y_0)
+phi_diff_x = weighted_averages[1] #Minimum at the point (x_1,y_0)
+phi_diff_y = weighted_averages[2] #Minimum at the point (x_0,y_1)
 
 #3. Compute the Element Matrices. 
 var_list = []
@@ -110,7 +126,6 @@ for xcounter in range(number_of_divisions):
             solution_list = []
             x_max = XGrid[ycounter][xcounter - 1]
             x_min = XGrid[ycounter][xcounter]
- 
             y_max = YGrid[ycounter - 1][xcounter]
             y_min = YGrid[ycounter][xcounter]
  
@@ -142,7 +157,7 @@ for solution_counter in range(len(solution_equations)):
     for eq_counter in range(len(solution_equations[solution_counter])):
 
         equation_system[z_vars.index(var_list[solution_counter][eq_counter])] += solution_equations[solution_counter][eq_counter]
-# print(sym.latex(sym.Matrix(equation_system)))
+print(sym.latex(sym.Matrix(equation_system)))
 #Make the equations into a matrix to make them easier to solve. 
 #5. Impose Boundary conditions. Zero at x = 1 and y = 1. This replaces all of the nodes in those positions with zeros.
 replacement_eq = []
@@ -166,7 +181,7 @@ for z_index,variable in enumerate(z_vars):
     else:
         boundary_eq_with_result.append(sym.Eq(variable,0))
 
-print(sym.latex(sym.Matrix(boundary_eq_with_result)))
+# print(sym.latex(sym.Matrix(boundary_eq_with_result)))
 
 #6. Solve the System. Sympy linsolve makes short work of that.   
 resultset = sym.linsolve(boundary_eq_with_result,z_vars)
