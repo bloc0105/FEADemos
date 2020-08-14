@@ -56,7 +56,7 @@ for xcounter in range(number_of_divisions):
         x_low = x_range[xcounter + 1]
         y_high = y_vars[xcounter]
         y_low = y_vars[xcounter + 1]
-        eq0 = phi_diff_0.subs(xstart,x_high).subs(xend,x_low).subs(ystarhttp://www.bodybuilding.com/exercises/finder/lookupt,y_high).subs(yend,y_low)  
+        eq0 = phi_diff_0.subs(xstart,x_high).subs(xend,x_low).subs(ystart,y_high).subs(yend,y_low)  
         eq1 = phi_diff_x.subs(xstart,x_high).subs(xend,x_low).subs(ystart,y_high).subs(yend,y_low)  
         solution_list.append(eq0)
         solution_list.append(eq1)

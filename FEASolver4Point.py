@@ -25,7 +25,7 @@ Engineers, ISBN 0-486-67620-X.
 
 low_boundary = 0 # The lower boundary of the graph
 high_boundary = 1 # The upper boundary of the graph
-grid_points = 3 # The number of nodes that exist along the axes of the boundary (inclusive)
+grid_points = 10 # The number of nodes that exist along the axes of the boundary (inclusive)
 
 #1. Discretize the system.
 number_of_divisions = (high_boundary - low_boundary) * grid_points #each quadrant will have the same number of nodes in it
